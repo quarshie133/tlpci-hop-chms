@@ -336,5 +336,5 @@ def generate_giving_statements(year: int):
         total = Contribution.objects.filter(
             member=member, date__year=year
         ).aggregate(total=Sum("amount"))["total"] or 0
-        logger.info(f"Giving statement for {member}: ${total}")
+        logger.info(f"Giving statement for {member}: GHS {total}")
     # TODO: Render PDF and email to member

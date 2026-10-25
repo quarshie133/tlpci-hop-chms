@@ -17,6 +17,7 @@ import { useAsync } from "@/lib/hooks";
 import {
   formatDate,
   formatDateTime,
+  CHURCH_CURRENCY,
   formatMoney,
   GENDERS,
   initials,
@@ -410,7 +411,7 @@ function GivingTab({ memberId, token }: { memberId: string; token: string }) {
   const rows = giving.data?.results ?? [];
   const year = new Date().getFullYear();
   const ytd = rows.filter((c) => c.date.startsWith(String(year))).reduce((s, c) => s + parseFloat(c.amount || "0"), 0);
-  const currency = rows[0]?.currency || "USD";
+  const currency = rows[0]?.currency || CHURCH_CURRENCY;
 
   return (
     <Card className="overflow-hidden">

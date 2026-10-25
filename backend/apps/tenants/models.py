@@ -25,7 +25,7 @@ class Church(TenantMixin):
     denomination = models.CharField(max_length=100, blank=True)
     founded_year = models.PositiveSmallIntegerField(null=True, blank=True)
     timezone = models.CharField(max_length=50, default="America/New_York")
-    currency = models.CharField(max_length=3, default="USD")
+    currency = models.CharField(max_length=3, default="GHS")
     is_active = models.BooleanField(default=True)
     subscription_plan = models.CharField(
         max_length=20,

@@ -236,7 +236,7 @@ Prioritised checklist from the audit on 2026-10-21 (commit `34f45ed`). Evidence 
   - **Do:**
     - Provision a fresh production Neon project or branch; run migrations.
     - Create the real church tenant and admins.
-    - Never load `seed_tlpci.py`; remove demo accounts and the known shared password from any shared database.
+    - Remove demo accounts and the known shared password from any shared database (the demo seed script `seed_tlpci.py` was removed on 2026-10-25).
   - **Depends on:** P1-3
   - **Accept:** The production database contains no seed or demo records.
 

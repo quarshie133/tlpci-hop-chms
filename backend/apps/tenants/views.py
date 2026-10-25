@@ -31,7 +31,7 @@ class ChurchRegistrationView(generics.CreateAPIView):
             state=data.get("state", ""),
             country=data.get("country", "US"),
             timezone=data.get("timezone", "UTC"),
-            currency=data.get("currency", "USD"),
+            currency=data.get("currency", "GHS"),
         )
         church.save()  # triggers schema creation
 

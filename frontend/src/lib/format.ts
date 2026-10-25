@@ -86,11 +86,15 @@ export function initialsFromName(name?: string | null): string {
   return initials(parts[0], parts.length > 1 ? parts[parts.length - 1] : "");
 }
 
-export function formatMoney(value: string | number | null | undefined, currency = "USD"): string {
+/** The church's currency: Ghana cedis. */
+export const CHURCH_CURRENCY = "GHS";
+
+/** Money in Ghanaian format, e.g. GH₵1,900.00. */
+export function formatMoney(value: string | number | null | undefined, currency = CHURCH_CURRENCY): string {
   const n = typeof value === "string" ? parseFloat(value) : value ?? 0;
   if (Number.isNaN(n)) return "—";
   try {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency, maximumFractionDigits: 2 }).format(n);
+    return new Intl.NumberFormat("en-GH", { style: "currency", currency, maximumFractionDigits: 2 }).format(n);
   } catch {
     return `${currency} ${n.toFixed(2)}`;
   }

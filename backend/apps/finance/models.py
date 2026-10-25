@@ -44,7 +44,7 @@ class Contribution(models.Model):
     fund = models.ForeignKey(Fund, on_delete=models.PROTECT, related_name="contributions")
     contribution_type = models.CharField(max_length=30, choices=ContributionType.choices, default=ContributionType.TITHE)
     amount = models.DecimalField(max_digits=14, decimal_places=2)
-    currency = models.CharField(max_length=3, default="USD")
+    currency = models.CharField(max_length=3, default="GHS")
     payment_method = models.CharField(max_length=30, choices=PaymentMethod.choices, default=PaymentMethod.CASH)
     reference_number = models.CharField(max_length=100, blank=True)
     check_number = models.CharField(max_length=50, blank=True)

@@ -18,7 +18,22 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "change-me-in-production")
 DEBUG = os.environ.get("DEBUG", "True") == "True"
 
-ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+
+
+def _env_list(name, default):
+    """Comma-separated env value as a list, ignoring blanks and stray spaces."""
+    return [v.strip() for v in os.environ.get(name, default).split(",") if v.strip()]
+
+
+def _bare_host(value):
+    """'https://example.com/' -> 'example.com'. ALLOWED_HOSTS takes hostnames, not URLs."""
+    return value.split("://", 1)[-1].split("/", 1)[0]
+
+
+ALLOWED_HOSTS = [_bare_host(h) for h in _env_list("ALLOWED_HOSTS", "localhost,127.0.0.1")]
+# Render sets this to the service's own hostname (e.g. myapp.onrender.com).
+if os.environ.get("RENDER_EXTERNAL_HOSTNAME"):
+    ALLOWED_HOSTS.append(os.environ["RENDER_EXTERNAL_HOSTNAME"])
 
 # ---------------------------------------------------------------------------
 # Multi-tenancy (django-tenants)
@@ -197,10 +212,10 @@ SPECTACULAR_SETTINGS = {
 # ---------------------------------------------------------------------------
 # CORS
 # ---------------------------------------------------------------------------
-CORS_ALLOWED_ORIGINS = os.environ.get(
-    "CORS_ALLOWED_ORIGINS",
-    "http://localhost:3000,http://127.0.0.1:3000",
-).split(",")
+# Origins are scheme + host only; a trailing slash would make corsheaders reject the setting.
+CORS_ALLOWED_ORIGINS = [
+    o.rstrip("/") for o in _env_list("CORS_ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")
+]
 CORS_ALLOW_CREDENTIALS = True
 
 # ---------------------------------------------------------------------------

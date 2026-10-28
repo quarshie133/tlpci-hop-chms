@@ -212,9 +212,10 @@ SPECTACULAR_SETTINGS = {
 # ---------------------------------------------------------------------------
 # CORS
 # ---------------------------------------------------------------------------
-# Origins are scheme + host only; a trailing slash would make corsheaders reject the setting.
+# Origins are scheme + host only, so 'https://app.example.com/login' is reduced to 'https://app.example.com'.
 CORS_ALLOWED_ORIGINS = [
-    o.rstrip("/") for o in _env_list("CORS_ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")
+    o.split("://", 1)[0] + "://" + _bare_host(o) if "://" in o else o
+    for o in _env_list("CORS_ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")
 ]
 CORS_ALLOW_CREDENTIALS = True
 

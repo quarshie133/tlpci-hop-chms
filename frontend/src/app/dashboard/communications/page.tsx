@@ -96,6 +96,7 @@ export default function CommunicationsPage() {
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [senderId, setSenderId] = useState("");
+  const [includeName, setIncludeName] = useState(true);
   const [audience, setAudience] = useState<AudienceKind>("active");
   const [chosenGroupId, setGroupId] = useState("");
   const [lifeStage, setLifeStage] = useState("adult");
@@ -138,11 +139,19 @@ export default function CommunicationsPage() {
   const specKey = JSON.stringify(spec);
   const debouncedSpecKey = useDebounced(specKey, 350);
   const debouncedBody = useDebounced(body, 500);
+  const debouncedName = useDebounced(name, 500);
   const preview = useAsync(
     token && debouncedSpecKey !== "null"
-      ? () => communicationsApi.preview(t, { channel, recipients_filter: JSON.parse(debouncedSpecKey), body: debouncedBody })
+      ? () =>
+          communicationsApi.preview(t, {
+            channel,
+            recipients_filter: JSON.parse(debouncedSpecKey),
+            body: debouncedBody,
+            name: debouncedName,
+            include_name_in_sms: includeName,
+          })
       : null,
-    [token, channel, debouncedSpecKey, debouncedBody]
+    [token, channel, debouncedSpecKey, debouncedBody, debouncedName, includeName]
   );
   const previewStale = specKey !== debouncedSpecKey;
   const recipientsLoading = (preview.loading || previewStale) && spec !== null;
@@ -157,7 +166,9 @@ export default function CommunicationsPage() {
     return () => window.clearInterval(id);
   }, [processing, reloadHistory]);
 
-  const sms = smsInfo(body);
+  // SMS has no subject field, so the broadcast name can be sent as the first line (matches the backend's compose_sms).
+  const smsText = channel === "sms" && includeName && name.trim() ? `${name.trim()}\n${body}` : body;
+  const sms = smsInfo(smsText);
   const audienceLabel =
     audience === "group"
       ? `Group: ${groups.data?.find((g) => g.id === groupId)?.name ?? "—"}`
@@ -176,7 +187,8 @@ export default function CommunicationsPage() {
     if (!name.trim()) e.name = "Give this broadcast a name so you can find it later.";
     if (channel === "email" && !subject.trim()) e.subject = "Email broadcasts need a subject line.";
     if (!body.trim()) e.body = "Write the message you want to send.";
-    if (cfg && channel === "sms" && body.length > cfg.max_message_length) e.body = `SMS messages are limited to ${cfg.max_message_length} characters.`;
+    if (cfg && channel === "sms" && smsText.length > cfg.max_message_length)
+      e.body = `SMS messages are limited to ${cfg.max_message_length} characters${includeName ? ", including the title line" : ""}.`;
     if (audience === "group" && !groupId) e.audience = "Choose a group.";
     if (audience === "members" && pickedIds.length === 0) e.audience = "Select at least one person.";
     if (audience === "phone" && !spec) e.phone = "Enter a Ghana mobile number, e.g. 0241234567 or +233241234567.";
@@ -190,6 +202,7 @@ export default function CommunicationsPage() {
     subject: channel === "email" ? subject.trim() : "",
     body: body.trim(),
     sender_id: channel === "sms" ? effectiveSender : "",
+    include_name_in_sms: channel === "sms" && includeName,
     recipients_filter: spec as AudienceSpec,
   });
 
@@ -207,6 +220,7 @@ export default function CommunicationsPage() {
   const resetComposer = () => {
     setDraftId(null);
     setName("");
+    setIncludeName(true);
     setSubject("");
     setBody("");
     setPickedIds([]);
@@ -297,6 +311,7 @@ export default function CommunicationsPage() {
     setSubject(c.subject ?? "");
     setBody(c.body ?? "");
     setSenderId(c.sender_id ?? "");
+    setIncludeName(c.include_name_in_sms ?? false);
     const type = String(f.type ?? "");
     if (type === "group") {
       setAudience("group");
@@ -428,7 +443,7 @@ export default function CommunicationsPage() {
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1fr)_200px]">
-                <Field label="Broadcast name" required hint="Internal name — recipients don't see this." error={errors.name || fieldError(apiError, "name")}>
+                <Field label="Broadcast name" required hint={channel === "sms" && includeName ? "Sent as the first line of the text, like a title." : "Internal name — recipients don't see this."} error={errors.name || fieldError(apiError, "name")}>
                   {(p) => <Input {...p} value={name} maxLength={300} placeholder="e.g. Midweek service reminder" onChange={(e) => setName(e.target.value)} />}
                 </Field>
                 {channel === "sms" && (
@@ -449,6 +464,15 @@ export default function CommunicationsPage() {
                   </Field>
                 )}
               </div>
+
+              {channel === "sms" && (
+                <Checkbox
+                  checked={includeName}
+                  onChange={setIncludeName}
+                  label="Show the broadcast name as a title"
+                  description="SMS has no subject line, so the name is added as the first line of the message. It counts toward the character limit."
+                />
+              )}
 
               {channel === "email" && (
                 <Field label="Subject" required error={errors.subject || fieldError(apiError, "subject")}>
@@ -664,7 +688,7 @@ export default function CommunicationsPage() {
                     <p className="mb-3 text-center text-[11px] font-medium text-ink-subtle">From {effectiveSender || "your sender ID"}</p>
                     {body.trim() ? (
                       <div className="ml-auto w-fit max-w-[85%] whitespace-pre-wrap break-words rounded-2xl rounded-br-md bg-brand px-3.5 py-2.5 text-[13px] leading-relaxed text-white">
-                        {body}
+                        {smsText}
                       </div>
                     ) : (
                       <p className="py-6 text-center text-[13px] text-ink-subtle">Your message will appear here.</p>
@@ -870,7 +894,7 @@ export default function CommunicationsPage() {
           </dl>
           <div>
             <p className="mb-1.5 text-[12px] font-medium text-ink-muted">Message</p>
-            <p className="max-h-48 overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-line p-3 text-[13px] leading-relaxed text-ink">{body}</p>
+            <p className="max-h-48 overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-line p-3 text-[13px] leading-relaxed text-ink">{smsText}</p>
           </div>
           <p className="text-[13px] text-ink-muted">
             The broadcast is queued and processed in the background{channel === "sms" ? " by AgooSMS" : ""}. History shows how many messages the
@@ -1234,7 +1258,7 @@ function CampaignDrawer({
             <div>
               <p className="mb-1.5 text-[12px] font-medium text-ink-muted">Message</p>
               <p className="max-h-32 overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-line bg-surface-muted p-3 text-[13px] leading-relaxed text-ink">
-                {c.body}
+                {c.channel === "sms" && c.include_name_in_sms ? `${c.name}\n${c.body ?? ""}` : c.body}
               </p>
             </div>
 

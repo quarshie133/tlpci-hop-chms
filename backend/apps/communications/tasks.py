@@ -101,12 +101,13 @@ def _process_sms(campaign):
         return None
 
     sender_id = campaign.sender_id or cfg.default_sender_id
+    text = campaign.sms_text
     while True:
         batch = _claim_batch(campaign, cfg.max_bulk)
         if not batch:
             return None
         numbers = [r.address for r in batch]
-        result = client.send(numbers[0], campaign.body, sender_id) if len(numbers) == 1 else client.send_bulk(numbers, campaign.body, sender_id)
+        result = client.send(numbers[0], text, sender_id) if len(numbers) == 1 else client.send_bulk(numbers, text, sender_id)
         now = timezone.now()
         by_id = {r.id: r for r in batch}
 

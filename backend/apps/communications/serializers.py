@@ -3,7 +3,7 @@
 from rest_framework import serializers
 
 from .audience import describe_audience, validate_audience
-from .models import Campaign, CampaignAuditLog, CampaignRecipient, MessageTemplate
+from .models import Campaign, CampaignAuditLog, CampaignRecipient, MessageTemplate, compose_sms
 from .sms.config import get_sms_settings
 from .sms.phone import mask_phone
 
@@ -21,7 +21,7 @@ class CampaignSerializer(serializers.ModelSerializer):
     class Meta:
         model = Campaign
         fields = [
-            "id", "name", "channel", "subject", "body", "sender_id", "recipients_filter", "audience_label",
+            "id", "name", "channel", "subject", "body", "sender_id", "include_name_in_sms", "recipients_filter", "audience_label",
             "recipient_count", "sent_count", "failed_count", "unknown_count", "skipped_count",
             "status", "dry_run", "last_error", "scheduled_at", "processing_started_at", "sent_at",
             "completed_at", "created_by_user_id", "sent_by_user_id", "created_at", "template",
@@ -45,8 +45,15 @@ class CampaignSerializer(serializers.ModelSerializer):
 
         if channel == "sms":
             cfg = get_sms_settings()
-            if len(body) > cfg.max_message_length:
-                raise serializers.ValidationError({"body": f"SMS messages are limited to {cfg.max_message_length} characters."})
+            text = compose_sms(
+                attrs.get("name", getattr(self.instance, "name", "")),
+                body,
+                attrs.get("include_name_in_sms", getattr(self.instance, "include_name_in_sms", False)),
+            )
+            if len(text) > cfg.max_message_length:
+                raise serializers.ValidationError(
+                    {"body": f"SMS messages are limited to {cfg.max_message_length} characters, including the title line."}
+                )
             sender = (attrs.get("sender_id", getattr(self.instance, "sender_id", "")) or "").strip()
             if sender and cfg.sender_ids and sender not in cfg.sender_ids:
                 raise serializers.ValidationError({"sender_id": "Choose one of the approved sender IDs."})
@@ -89,6 +96,8 @@ class AudiencePreviewSerializer(serializers.Serializer):
     channel = serializers.ChoiceField(choices=["sms", "email"])
     recipients_filter = serializers.JSONField()
     body = serializers.CharField(required=False, allow_blank=True, default="")
+    name = serializers.CharField(required=False, allow_blank=True, default="")
+    include_name_in_sms = serializers.BooleanField(required=False, default=False)
 
     def validate(self, attrs):
         attrs["recipients_filter"] = validate_audience(attrs["recipients_filter"], attrs["channel"])

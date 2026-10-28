@@ -105,6 +105,14 @@ class PreviewTests(CampaignApiTestCase):
         self.assertEqual(resp.data["invalid_sample"][0]["name"], "Yaw Boateng")
         self.assertEqual(resp.data["segments_per_message"], 1)
 
+    def test_title_line_counts_toward_segments(self):
+        self.make_member("Ama", "Mensah", phone="0241234567")
+        payload = {"channel": "sms", "recipients_filter": {"type": "active"}, "body": "x" * 150, "name": "Youth Camp"}
+        plain = self.api.post(f"{BASE}/campaigns/preview/", payload, format="json")
+        titled = self.api.post(f"{BASE}/campaigns/preview/", {**payload, "include_name_in_sms": True}, format="json")
+        self.assertEqual((plain.data["characters"], plain.data["segments_per_message"]), (150, 1))
+        self.assertEqual((titled.data["characters"], titled.data["segments_per_message"]), (161, 2))
+
     def test_selected_members_audience(self):
         a = self.make_member("A", "One", phone="0241234567")
         self.make_member("B", "Two", phone="0201112222")

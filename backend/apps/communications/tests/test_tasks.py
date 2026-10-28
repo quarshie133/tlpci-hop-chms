@@ -30,12 +30,14 @@ class FakeClient:
     def __init__(self, *results):
         self.results = list(results)
         self.calls = []
+        self.messages = []
 
     def send(self, to, message, sender_id):
         return self.send_bulk([to], message, sender_id)
 
     def send_bulk(self, recipients, message, sender_id):
         self.calls.append(list(recipients))
+        self.messages.append(message)
         result = self.results.pop(0) if self.results else ProviderResult(ACCEPTED)
         if result.outcome == ACCEPTED:
             for p in recipients:
@@ -62,6 +64,20 @@ class TaskTestCase(CommsTenantTestCase):
 
     def statuses(self, campaign):
         return dict(campaign.recipient_records.values_list("address", "status"))
+
+
+class TitleLineTests(TaskTestCase):
+    def test_broadcast_name_is_first_line_when_enabled(self):
+        campaign = self.queue()
+        Campaign.objects.filter(pk=campaign.pk).update(name="Youth Camp", include_name_in_sms=True)
+        client = FakeClient()
+        self.run_task(campaign, client)
+        self.assertEqual(client.messages, ["Youth Camp\nHello"])
+
+    def test_message_unchanged_when_disabled(self):
+        client = FakeClient()
+        self.run_task(self.queue(), client)
+        self.assertEqual(client.messages, ["Hello"])
 
 
 class DispatchTests(TaskTestCase):

@@ -38,6 +38,9 @@ class Campaign(models.Model):
     subject = models.CharField(max_length=300, blank=True)
     body = models.TextField()
     sender_id = models.CharField(max_length=11, blank=True, help_text="Approved SMS sender ID used for this campaign")
+    include_name_in_sms = models.BooleanField(
+        default=False, help_text="Put the broadcast name on the first line of the SMS (SMS has no subject field)"
+    )
     recipients_filter = models.JSONField(default=dict, blank=True, help_text="Validated audience specification")
     recipient_count = models.PositiveIntegerField(default=0)
     sent_count = models.PositiveIntegerField(default=0)
@@ -60,6 +63,17 @@ class Campaign(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.status})"
+
+    @property
+    def sms_text(self) -> str:
+        """The exact text recipients receive."""
+        return compose_sms(self.name, self.body, self.include_name_in_sms)
+
+
+def compose_sms(name: str, body: str, include_name: bool) -> str:
+    """SMS has no title field, so the broadcast name, when wanted, becomes the first line."""
+    name = (name or "").strip()
+    return f"{name}\n{body}" if include_name and name else body
 
 
 class CampaignRecipient(models.Model):

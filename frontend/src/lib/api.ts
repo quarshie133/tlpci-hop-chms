@@ -523,6 +523,7 @@ export interface Campaign {
   subject?: string;
   body?: string;
   sender_id?: string;
+  include_name_in_sms?: boolean;
   recipients_filter?: AudienceSpec | Record<string, unknown>;
   audience_label?: string;
   dry_run?: boolean;
@@ -589,7 +590,7 @@ const post = (body?: unknown): RequestInit => ({ method: "POST", body: body === 
 
 export const communicationsApi = {
   ...resource<Campaign>(CAMPAIGNS),
-  preview: (token: string, data: { channel: string; recipients_filter: AudienceSpec; body?: string }) =>
+  preview: (token: string, data: { channel: string; recipients_filter: AudienceSpec; body?: string; name?: string; include_name_in_sms?: boolean }) =>
     request<AudiencePreview>(`${CAMPAIGNS}preview/`, post(data), token),
   send: (token: string, id: string, confirmRecipientCount?: number) =>
     request<{ detail: string; dry_run: boolean; recipient_count: number; skipped: number }>(

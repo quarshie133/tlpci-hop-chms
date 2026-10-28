@@ -14,7 +14,7 @@ from rest_framework.viewsets import ModelViewSet
 from apps.accounts.permissions import IsAdminOrAbove, IsStaffOrAbove
 
 from .audience import resolve_audience, validate_audience
-from .models import Campaign, CampaignAuditLog, CampaignRecipient, MessageTemplate
+from .models import Campaign, CampaignAuditLog, CampaignRecipient, MessageTemplate, compose_sms
 from .serializers import (
     AudiencePreviewSerializer,
     CampaignAuditLogSerializer,
@@ -122,7 +122,8 @@ class CampaignViewSet(ModelViewSet):
         cfg = get_sms_settings()
         data = res.summary()
         if ser.validated_data["channel"] == "sms":
-            seg = sms_segments(ser.validated_data.get("body") or "")
+            v = ser.validated_data
+            seg = sms_segments(compose_sms(v.get("name", ""), v.get("body") or "", v.get("include_name_in_sms", False)))
             data.update(
                 segments_per_message=seg["segments"],
                 encoding=seg["encoding"],
